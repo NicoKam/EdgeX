@@ -573,6 +573,9 @@
     <string name="compose_pie_center">Center</string>
     <string name="compose_pie_slot_title">%1$s Edge / Ring 1 · Slot %2$d</string>
     <string name="compose_pie_size">Size</string>
+    <string name="compose_pie_dead_zone">Dead zone</string>
+    <string name="compose_pie_far_trigger">Trigger beyond fan</string>
+    <string name="compose_pie_far_trigger_desc">Trigger the nearest sector by direction when the finger slides past the outer edge</string>
     <string name="compose_pie_color_follow_theme">Follow theme color</string>
     <string name="compose_pie_color_custom">Pie color</string>
     <string name="compose_panel_color_follow_theme">Follow theme color</string>

@@ -6,11 +6,21 @@ import de.robv.android.xposed.XposedBridge
 object PieManager {
     private var activeWindow: PieWindow? = null
 
-    fun show(context: Context, anchorX: Float, anchorY: Float, edge: String, rings: List<PieView.Ring>, accentColor: Int, sizeScale: Float) {
+    fun show(
+        context: Context,
+        anchorX: Float,
+        anchorY: Float,
+        edge: String,
+        rings: List<PieView.Ring>,
+        accentColor: Int,
+        sizeScale: Float,
+        deadZoneDp: Float,
+        farTriggerEnabled: Boolean,
+    ) {
         if (activeWindow?.isShowing() == true) return
         val window = PieWindow(context) { activeWindow = null }
         activeWindow = window
-        window.show(anchorX, anchorY, edge, rings, accentColor, sizeScale)
+        window.show(anchorX, anchorY, edge, rings, accentColor, sizeScale, deadZoneDp, farTriggerEnabled)
     }
 
     fun update(x: Float, y: Float) {

@@ -447,7 +447,17 @@ internal class GestureActionDispatcher(
             })
         }
         if (rings.all { it.slots.isEmpty() }) return
-        PieManager.show(context, anchorX, anchorY, edge, rings, resolvePieColor(), resolvePieSizeScale())
+        PieManager.show(
+            context,
+            anchorX,
+            anchorY,
+            edge,
+            rings,
+            resolvePieColor(),
+            resolvePieSizeScale(),
+            resolvePieDeadZone(),
+            resolvePieFarTrigger(),
+        )
     }
 
     private fun resolvePieColor(): Int {
@@ -459,6 +469,14 @@ internal class GestureActionDispatcher(
             .toFloatOrNull()
             ?.coerceIn(0.8f, 1.2f)
             ?: AppConfig.PIE_SIZE_SCALE_DEFAULT
+
+    private fun resolvePieDeadZone(): Float =
+        resolveConfig(AppConfig.PIE_DEAD_ZONE)
+            .toFloatOrNull()
+            ?.coerceIn(AppConfig.PIE_DEAD_ZONE_MIN, AppConfig.PIE_DEAD_ZONE_MAX)
+            ?: AppConfig.PIE_DEAD_ZONE_DEFAULT
+
+    private fun resolvePieFarTrigger(): Boolean = resolveConfig(AppConfig.PIE_FAR_TRIGGER) == "true"
 
     private fun loadActionIcon(context: Context, action: String): Drawable? {
         if (action.startsWith("launch_app:")) {

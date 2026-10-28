@@ -573,6 +573,9 @@
     <string name="compose_pie_center">中心</string>
     <string name="compose_pie_slot_title">%1$s边缘 / 环 1 · 槽位 %2$d</string>
     <string name="compose_pie_size">大小</string>
+    <string name="compose_pie_dead_zone">中心死区</string>
+    <string name="compose_pie_far_trigger">滑出扇形仍触发</string>
+    <string name="compose_pie_far_trigger_desc">手指滑出扇形外沿时，按方向触发最近的分区</string>
     <string name="compose_pie_color_follow_theme">跟随主题色</string>
     <string name="compose_pie_color_custom">Pie 颜色</string>
     <string name="compose_panel_color_follow_theme">跟随主题色</string>

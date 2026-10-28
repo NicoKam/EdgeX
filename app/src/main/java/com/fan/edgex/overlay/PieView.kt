@@ -11,6 +11,7 @@ import android.graphics.drawable.Drawable
 import android.text.TextPaint
 import android.util.TypedValue
 import android.view.View
+import com.fan.edgex.config.AppConfig
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
@@ -22,7 +23,6 @@ class PieView(context: Context) : View(context) {
     data class Ring(val slots: List<Slot>)
 
     private companion object {
-        const val INNER_DEAD_ZONE_DP = 90f
         const val RING0_DRAW_OUTER   = 154f   // ring 0 drawn outer edge
         const val RING1_DRAW_INNER   = 164f   // ring 1 drawn inner edge (10dp gap)
         const val OUTER_LIMIT_DP     = 250f
@@ -51,6 +51,17 @@ class PieView(context: Context) : View(context) {
             field = value.coerceIn(0.8f, 1.2f)
             invalidate()
         }
+
+    // Radius (dp, before sizeScale) around the anchor where lifting cancels the pie.
+    var deadZoneDp: Float = AppConfig.PIE_DEAD_ZONE_DEFAULT
+        set(value) {
+            field = value.coerceIn(AppConfig.PIE_DEAD_ZONE_MIN, AppConfig.PIE_DEAD_ZONE_MAX)
+            invalidate()
+        }
+
+    // When true, a finger beyond the outer ring still selects the nearest sector
+    // by angle instead of cancelling.
+    var farTriggerEnabled: Boolean = false
 
     private fun colorNormal(ringIndex: Int): Int {
         val hsv = FloatArray(3)
@@ -114,8 +125,6 @@ class PieView(context: Context) : View(context) {
         setLayerType(LAYER_TYPE_SOFTWARE, null)
     }
 
-    fun isAnimationComplete() = animFraction >= 1.0f
-
     fun animateIn() {
         animator?.cancel()
         animator = ValueAnimator.ofFloat(0f, 1f).apply {
@@ -144,7 +153,7 @@ class PieView(context: Context) : View(context) {
 
     // Drawing radii (with gap between rings)
     private fun ringDrawInnerR(ringIndex: Int) =
-        if (ringIndex == 0) scaledDp(INNER_DEAD_ZONE_DP) else scaledDp(RING1_DRAW_INNER)
+        if (ringIndex == 0) scaledDp(deadZoneDp) else scaledDp(RING1_DRAW_INNER)
     private fun ringDrawOuterR(ringIndex: Int) =
         if (ringIndex == 0) scaledDp(RING0_DRAW_OUTER) else scaledDp(OUTER_LIMIT_DP)
 
@@ -159,6 +168,7 @@ class PieView(context: Context) : View(context) {
         val dy = y - anchorY
         val distSq = dx * dx + dy * dy
         val dist = sqrt(distSq.toDouble()).toFloat()
+        val beyondOuter = farTriggerEnabled && isBeyondOuterRing(dist)
         val ringIndex = hitRingIndex(dist) ?: return null
         val ring = rings.getOrNull(ringIndex) ?: return null
         val n = ring.slots.size
@@ -174,6 +184,8 @@ class PieView(context: Context) : View(context) {
             }
         }
 
+        // Far trigger: a finger past the outer edge still selects the angularly nearest sector
+        if (beyondOuter) return Pair(ringIndex, nearestSectorIndex(fingerAngle, n, step))
         return null
     }
 
@@ -183,7 +195,11 @@ class PieView(context: Context) : View(context) {
                 dist >= ringDrawInnerR(ringIndex) - scaledDp(HIT_RADIUS_SLOP_DP) &&
                 dist <= ringDrawOuterR(ringIndex) + scaledDp(HIT_RADIUS_SLOP_DP)
         }
-        if (candidates.isEmpty()) return null
+        if (candidates.isEmpty()) {
+            // Far trigger: beyond the outermost ring resolves to that ring, judged only by angle
+            if (farTriggerEnabled && isBeyondOuterRing(dist)) return outermostPopulatedRing()
+            return null
+        }
 
         if (highlightedRing in candidates) return highlightedRing
 
@@ -192,6 +208,29 @@ class PieView(context: Context) : View(context) {
             val outer = ringDrawOuterR(ringIndex)
             if (dist in inner..outer) 0f else minOf(kotlin.math.abs(dist - inner), kotlin.math.abs(dist - outer))
         }
+    }
+
+    private fun isBeyondOuterRing(dist: Float): Boolean {
+        val outermost = outermostPopulatedRing() ?: return false
+        return dist > ringDrawOuterR(outermost) + scaledDp(HIT_RADIUS_SLOP_DP)
+    }
+
+    private fun outermostPopulatedRing(): Int? =
+        rings.indices.filter { rings[it].slots.isNotEmpty() }.maxOrNull()
+
+    private fun nearestSectorIndex(fingerAngle: Float, n: Int, step: Float): Int {
+        var best = 0
+        var bestDelta = 360f
+        for (i in 0 until n) {
+            val mid = fanStartAngle() + i * step + step / 2f
+            val diff = normalize(fingerAngle - mid)
+            val delta = if (diff > 180f) 360f - diff else diff
+            if (delta < bestDelta) {
+                bestDelta = delta
+                best = i
+            }
+        }
+        return best
     }
 
     private fun isAngleInArc(angle: Float, start: Float, sweep: Float): Boolean {

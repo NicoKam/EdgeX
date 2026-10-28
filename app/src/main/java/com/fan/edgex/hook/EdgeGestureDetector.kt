@@ -242,6 +242,9 @@ internal class EdgeGestureDetector(
         val session = activeSession ?: return false
 
         if (session.pieMode) {
+            // Refresh the highlight with the lift position: a fast flick can outrun the
+            // last MOVE sample, and the sector under the finger at release is what counts.
+            callbacks.updatePie(event.rawX, event.rawY)
             callbacks.commitPie(context)
             return finishSession()
         }

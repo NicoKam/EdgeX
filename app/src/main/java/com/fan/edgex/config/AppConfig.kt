@@ -95,6 +95,11 @@ object AppConfig {
     const val PIE_SIZE_SCALE = "pie_size_scale"
     const val PIE_COLOR = "pie_color"
     const val PIE_SIZE_SCALE_DEFAULT = 1.0f
+    const val PIE_DEAD_ZONE = "pie_dead_zone"
+    const val PIE_DEAD_ZONE_DEFAULT = 90f
+    const val PIE_DEAD_ZONE_MIN = 30f
+    const val PIE_DEAD_ZONE_MAX = 120f
+    const val PIE_FAR_TRIGGER = "pie_far_trigger"
     val PIE_EDGES = listOf("left", "right", "top", "bottom")
 
     fun pieSlot(edge: String, ring: Int, slot: Int) = "pie_${edge}_ring${ring}_slot${slot}"

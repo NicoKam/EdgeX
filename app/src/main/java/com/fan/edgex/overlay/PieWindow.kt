@@ -13,7 +13,16 @@ class PieWindow(
     private val pieView = PieView(context)
     private var added = false
 
-    fun show(anchorX: Float, anchorY: Float, edge: String, rings: List<PieView.Ring>, accentColor: Int, sizeScale: Float) {
+    fun show(
+        anchorX: Float,
+        anchorY: Float,
+        edge: String,
+        rings: List<PieView.Ring>,
+        accentColor: Int,
+        sizeScale: Float,
+        deadZoneDp: Float,
+        farTriggerEnabled: Boolean,
+    ) {
         if (added) return
         pieView.anchorX = anchorX
         pieView.anchorY = anchorY
@@ -21,6 +30,8 @@ class PieWindow(
         pieView.rings = rings
         pieView.accentColor = accentColor
         pieView.sizeScale = sizeScale
+        pieView.deadZoneDp = deadZoneDp
+        pieView.farTriggerEnabled = farTriggerEnabled
 
         @Suppress("DEPRECATION")
         val params = WindowManager.LayoutParams(
@@ -53,7 +64,9 @@ class PieWindow(
     fun commit(): String? {
         val r = pieView.highlightedRing
         val s = pieView.highlightedSlot
-        val selected = if (pieView.isAnimationComplete() && r >= 0 && s >= 0)
+        // No highlight (dead zone or outside the fan) means the release cancels;
+        // the entry animation no longer blocks commits.
+        val selected = if (r >= 0 && s >= 0)
             pieView.rings.getOrNull(r)?.slots?.getOrNull(s)?.action
         else null
         dismiss()

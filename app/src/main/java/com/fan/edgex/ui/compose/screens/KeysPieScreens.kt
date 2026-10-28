@@ -416,6 +416,8 @@ fun PieScreen(
     var refreshTick by remember { mutableStateOf(0) }
     var selectedSector by remember { mutableStateOf<PieSector?>(null) }
     var sizeScale by remember { mutableStateOf(context.getPieSizeScale()) }
+    var deadZone by remember { mutableStateOf(context.getPieDeadZone()) }
+    var farTrigger by remember { mutableStateOf(context.getConfigBool(AppConfig.PIE_FAR_TRIGGER)) }
     var followThemeColor by remember { mutableStateOf(context.getConfigString(AppConfig.PIE_COLOR).isBlank()) }
     var customPieColor by remember { mutableStateOf(context.getPieCustomColor(colors.accent)) }
     var pickingSector by remember { mutableStateOf<PieSector?>(null) }
@@ -458,6 +460,7 @@ fun PieScreen(
             slots = slots,
             selectedSector = selectedSector,
             sizeScale = sizeScale,
+            deadZone = deadZone,
             pieColor = previewColor,
             onSlotClick = { sector ->
                 selectedSector = sector
@@ -470,6 +473,16 @@ fun PieScreen(
             onSizeScaleChange = {
                 sizeScale = it
                 context.putConfigsSync(AppConfig.PIE_SIZE_SCALE to "%.2f".format(Locale.US, it))
+            },
+            deadZone = deadZone,
+            onDeadZoneChange = {
+                deadZone = it
+                context.putConfigsSync(AppConfig.PIE_DEAD_ZONE to "%.0f".format(Locale.US, it))
+            },
+            farTrigger = farTrigger,
+            onFarTriggerChange = {
+                farTrigger = it
+                context.putConfigsSync(AppConfig.PIE_FAR_TRIGGER to it.toString())
             },
             followThemeColor = followThemeColor,
             pieColor = customPieColor,
@@ -545,6 +558,7 @@ private fun PieModelEditor(
     slots: List<PieSlotUi>,
     selectedSector: PieSector?,
     sizeScale: Float,
+    deadZone: Float,
     pieColor: Color,
     onSlotClick: (PieSector) -> Unit,
     modifier: Modifier = Modifier,
@@ -565,6 +579,7 @@ private fun PieModelEditor(
                 width = phoneWidth.toPx(),
                 height = phoneHeight.toPx(),
                 sizeScale = sizeScale,
+                deadZoneDp = deadZone,
                 sideInset = (18.dp * scale).toPx(),
                 edgePadding = (24.dp * scale).toPx(),
             )
@@ -679,6 +694,10 @@ private fun PieSlotIcon(slot: PieSlotUi, tint: Color, iconSize: Dp) {
 private fun PieOptionsPanel(
     sizeScale: Float,
     onSizeScaleChange: (Float) -> Unit,
+    deadZone: Float,
+    onDeadZoneChange: (Float) -> Unit,
+    farTrigger: Boolean,
+    onFarTriggerChange: (Boolean) -> Unit,
     followThemeColor: Boolean,
     pieColor: Color,
     onFollowThemeColorChange: (Boolean) -> Unit,
@@ -687,6 +706,15 @@ private fun PieOptionsPanel(
 ) {
     EdgeXListGroup(modifier = modifier) {
         PieSizeRow(sizeScale = sizeScale, onSizeScaleChange = onSizeScaleChange)
+        EdgeXDivider()
+        PieDeadZoneRow(deadZone = deadZone, onDeadZoneChange = onDeadZoneChange)
+        EdgeXDivider()
+        EdgeXSwitchRow(
+            title = stringResource(R.string.compose_pie_far_trigger),
+            subtitle = stringResource(R.string.compose_pie_far_trigger_desc),
+            checked = farTrigger,
+            onCheckedChange = onFarTriggerChange,
+        )
         EdgeXDivider()
         ThemeColorSettingRow(
             configKey = AppConfig.PIE_COLOR,
@@ -734,11 +762,51 @@ private fun PieSizeRow(sizeScale: Float, onSizeScaleChange: (Float) -> Unit) {
     }
 }
 
+@Composable
+private fun PieDeadZoneRow(deadZone: Float, onDeadZoneChange: (Float) -> Unit) {
+    val colors = LocalEdgeXColors.current
+    Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = stringResource(R.string.compose_pie_dead_zone),
+                color = colors.onSurface,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 16.sp,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = "${deadZone.roundToInt()} dp",
+                color = colors.onSurfaceDim,
+                fontWeight = FontWeight.Medium,
+                fontSize = 13.sp,
+            )
+        }
+        Slider(
+            value = deadZone,
+            onValueChange = { value ->
+                onDeadZoneChange(value.roundToInt().toFloat())
+            },
+            valueRange = AppConfig.PIE_DEAD_ZONE_MIN..AppConfig.PIE_DEAD_ZONE_MAX,
+            colors = SliderDefaults.colors(
+                thumbColor = colors.accent,
+                activeTrackColor = colors.accent,
+                inactiveTrackColor = colors.surface2,
+            ),
+        )
+    }
+}
+
 private fun Context.getPieSizeScale(): Float =
     getConfigString(AppConfig.PIE_SIZE_SCALE)
         .toFloatOrNull()
         ?.coerceIn(0.8f, 1.2f)
         ?: AppConfig.PIE_SIZE_SCALE_DEFAULT
+
+private fun Context.getPieDeadZone(): Float =
+    getConfigString(AppConfig.PIE_DEAD_ZONE)
+        .toFloatOrNull()
+        ?.coerceIn(AppConfig.PIE_DEAD_ZONE_MIN, AppConfig.PIE_DEAD_ZONE_MAX)
+        ?: AppConfig.PIE_DEAD_ZONE_DEFAULT
 
 private fun Context.getPieCustomColor(themeColor: Color): Color =
     getConfigString(AppConfig.PIE_COLOR)
@@ -757,6 +825,7 @@ private fun pieGeometry(
     width: Float,
     height: Float,
     sizeScale: Float,
+    deadZoneDp: Float,
     sideInset: Float,
     edgePadding: Float,
 ): PieGeometry {
@@ -774,7 +843,7 @@ private fun pieGeometry(
     return PieGeometry(
         edge = edge,
         anchor = anchor,
-        innerDeadR = outerR * 90f / 250f,
+        innerDeadR = outerR * deadZoneDp / 250f,
         ring0OuterR = outerR * 154f / 250f,
         ring1InnerR = outerR * 164f / 250f,
         outerR = outerR,
